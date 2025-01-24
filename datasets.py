@@ -52,11 +52,11 @@ class SiameseMNIST(Dataset):
         if self.train:
             target = np.random.randint(0, 2)
             img1, label1 = self.train_data[index], self.train_labels[index].item()
-            if target == 1:
+            if target == 1: #WJ:find same class, diff obj
                 siamese_index = index
                 while siamese_index == index:
                     siamese_index = np.random.choice(self.label_to_indices[label1])
-            else:
+            else: #WJ:find diff class
                 siamese_label = np.random.choice(list(self.labels_set - set([label1])))
                 siamese_index = np.random.choice(self.label_to_indices[siamese_label])
             img2 = self.train_data[siamese_index]
