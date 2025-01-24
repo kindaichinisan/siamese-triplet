@@ -1,0 +1,13 @@
+# dependencies
+
+numpy
+pillow #PIL
+torch
+torchvision
+tqdm
+tensorboardX
+ipykernel
+jupyter
+ipywidgets
+
+matplotlib
