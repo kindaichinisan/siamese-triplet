@@ -21,16 +21,22 @@ RUN pip config set global.cert $(pwd)/certbundle.crt
 RUN pip3 config set global.cert $(pwd)/certbundle.crt
 
 #urllib
-RUN echo "export SSL_CERT_FILE=/path/to/certbundle.crt" >> ~/.bashrc
+RUN echo "export SSL_CERT_FILE=$(pwd)/certbundle.crt" >> ~/.bashrc
 RUN source ~/.bashrc
 
 RUN apt-get update && apt-get install -y git
 
-
+RUN echo ""
 RUN git clone https://github.com/kindaichinisan/siamese-triplet.git
 
 WORKDIR /home/hwenjun/siamese-triplet
 
-#install python requirements
-#RUN apt install python=3.11
-#RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt
+
+# ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+# ENV HTTPS_PROXY=http://proxy.example.com:8080
+# ENV HTTP_PROXY=http://proxy.example.com:8080
+ENV NODE_EXTRA_CA_CERTS=/home/hwenjun/certbundle.crt
+RUN code-server --install-extension ms-python.python
+
+# WORKDIR ${HOME}

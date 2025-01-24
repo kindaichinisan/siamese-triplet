@@ -1,0 +1,77 @@
+# trying to create a custom vscode-server image
+# Use an official lightweight Linux image (e.g., Ubuntu or Debian)
+FROM ubuntu:latest
+
+# Set non-interactive mode for apt
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    sudo \
+    locales \
+    openssh-server \
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+# FOR DSO CA (to use curl)
+RUN wget --no-check-certificate https://gitlab.ai-stack.dso/eugene/ai-stack-certificates/-/raw/main/dso/DSOCA50.pem?inline=false -O DSOCA50.pem
+RUN wget --no-check-certificate https://gitlab.ai-stack.dso/eugene/ai-stack-certificates/-/raw/main/dso/DSOVisibilityCA.pem?inline=false -O DSOVisibilityCA.pem
+RUN apt-get update && apt-get -y install ca-certificates
+RUN mkdir -p /usr/local/share/ca-certificates
+RUN cp DSOCA50.pem /usr/local/share/ca-certificates/DSOCA50.crt
+RUN cp DSOVisibilityCA.pem /usr/local/share/ca-certificates/DSOVisibilityCA.crt
+RUN update-ca-certificates
+RUN wget --no-check-certificate https://gitlab.ai-stack.dso/eugene/ai-stack-certificates/-/raw/main/dso/certbundle.zip?inline=false -O certbundle.zip
+RUN unzip certbundle.zip
+
+# Set up locale
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# Add a non-root user for VS Code Server
+# RUN useradd -m -s /bin/bash vscode && \
+#     echo "vscode:vscode" | chpasswd && \
+#     usermod -aG sudo vscode && \
+#     echo "vscode ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to the vscode user
+# USER vscode
+# WORKDIR /home/vscode
+
+# Download and install VS Code Server
+RUN export CURL_CA_BUNDLE=$(pwd)/certbundle.crt
+# RUN echo "vscode" | sudo -S curl -fsSL https://code-server.dev/install.sh | sh
+RUN curl -fsSL https://code-server.dev/install.sh | sh
+# Expose the default VS Code Server port
+# USER root
+
+ENV NB_USER jovyan
+ENV NB_PREFIX /
+ENV HOME /home/$NB_USER
+
+#RUN mkdir -p ${HOME}
+
+EXPOSE 8888
+# Create jovyan user with UID 1000
+#RUN useradd -m -s /bin/bash -N -u 1000 jovyan
+
+#modify existing user with UID 1000 if exist
+RUN usermod -l jovyan -d /home/jovyan -m $(getent passwd 1000 | cut -d: -f1) \
+    && groupmod -n jovyan $(getent group 1000 | cut -d: -f1) \
+    && echo "jovyan:jovyan" | chpasswd
+
+# Switch to jovyan user
+USER jovyan
+# Set working directory
+WORKDIR /home/jovyan
+
+RUN chown -R jovyan:jovyan /home/jovyan
+VOLUME /home/jovyan
+
+# Set up the entrypoint to run VS Code Server
+CMD ["code-server", "--bind-addr", "0.0.0.0:8888", "--auth", "none"]
