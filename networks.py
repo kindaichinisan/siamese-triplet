@@ -85,3 +85,44 @@ class TripletNet(nn.Module):
 
     def get_embedding(self, x):
         return self.embedding_net(x)
+
+import torchvision.models as models
+
+class EmbeddingNet_Resnet(nn.Module):
+    def __init__(self, pretrained=True):
+        super(EmbeddingNet_Resnet, self).__init__()
+        
+        # Load pretrained ResNet-18
+        resnet_model = models.resnet18(pretrained=True)
+        
+        # Modify the first conv layer to accept grayscale (1-channel) images instead of RGB (3-channel)
+        resnet_model.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+
+        # # Freeze the layers of the ResNet model
+        # for param in resnet_model.base_model.parameters():
+        #     param.requires_grad = False
+            
+        # # Unfreeze the fully connected layer
+        # for param in resnet_model.base_model.fc.parameters():
+        #     param.requires_grad = True
+        
+        # Remove the original fully connected layers to use as a feature extractor
+        self.convnet = nn.Sequential(*list(resnet_model.children())[:-1])  # Remove the final FC layer
+        
+        # Define new fully connected layers for embedding
+        self.fc = nn.Sequential(
+            nn.Linear(resnet_model.fc.in_features, 256),  # Using the ResNet feature size (usually 512 or 2048)
+            nn.PReLU(),
+            nn.Linear(256, 256),
+            nn.PReLU(),
+            nn.Linear(256, 2)  # Output embedding dimension of 2
+        )
+
+    def forward(self, x):
+        output = self.convnet(x)  # Pass through ResNet feature extractor
+        output = output.view(output.size(0), -1)  # Flatten the features
+        output = self.fc(output)  # Pass through FC layers
+        return output
+
+    def get_embedding(self, x):
+        return self.forward(x)
