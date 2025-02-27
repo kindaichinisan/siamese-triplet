@@ -205,3 +205,22 @@ def preprocess_image(image_path):
     img = img.unsqueeze(0)  # Add batch dimension
 
     return img
+
+
+
+def extract_embeddings(dataloader, model):
+    with torch.no_grad():
+        model.eval()
+        embeddings = np.zeros((len(dataloader.dataset), 2))
+        labels = np.zeros(len(dataloader.dataset))
+        k = 0
+        images_list=[]
+        for images, target in dataloader:
+            if cuda:
+                images = images.cuda()
+            print(f'images.shape: {images.shape}')
+            embeddings[k:k+len(images)] = model.get_embedding(images).data.cpu().numpy()
+            labels[k:k+len(images)] = target.numpy()
+            k += len(images)
+            images_list.append(images)
+    return embeddings, labels, images_list
