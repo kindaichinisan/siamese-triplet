@@ -1,5 +1,4 @@
 __pycache__/
-docker/
 data/
-model/
-
+model/*
+test_img/*
